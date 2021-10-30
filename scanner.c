@@ -1,6 +1,6 @@
 /*
  * @Author       : Gehrychiang
- * @LastEditTime : 2021-10-30 21:30:57
+ * @LastEditTime : 2021-10-30 21:35:47
  * @Website      : www.yilantingfeng.site
  * @E-mail       : gehrychiang@aliyun.com
  * @ProbTitle    : (记得补充题目标题)
@@ -289,7 +289,15 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
             case eq:
                 cur_state = eq_state;
                 break;
+            case lt:
+                cur_state = eq_state;
+                break;
+            case gt:
+                cur_state = eq_state;
+                break;
 
+
+            //direct trans
             case space:
                 cur_state = End_state;
                 wordtype = single_delimiter;
@@ -298,7 +306,30 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
                 cur_state = End_state;
                 wordtype = single_delimiter;
                 break;
-
+            case left_brace:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+            case left_bracket:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+            case left_parenthesis:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+            case right_brace:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+            case right_bracket:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+            case right_parenthesis:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
             default:
                 cur_state = Err_state;
                 break;
