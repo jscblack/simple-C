@@ -1,6 +1,6 @@
 /*
  * @Author       : Gehrychiang
- * @LastEditTime : 2021-10-29 22:06:08
+ * @LastEditTime : 2021-10-30 21:30:57
  * @Website      : www.yilantingfeng.site
  * @E-mail       : gehrychiang@aliyun.com
  * @ProbTitle    : (记得补充题目标题)
@@ -61,6 +61,7 @@ number(oct,dec,hex)
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #define keyword_count 24
 char reserved_keyword[][20] = {"auto", "break", "case", "char", "continue",
                                "const", "default", "do", "double", "else",
@@ -77,6 +78,7 @@ typedef enum
     plus_state,
     minus_state,
 
+    eq_state,
     In_comment_state,
     In_dec_state,
     In_oct_state,
@@ -104,7 +106,6 @@ typedef enum
     double_relational_operator,
     char_const,
     string_const,
-    eof
 } word_type;
 
 char friendly_wordtype[][105] = {
@@ -123,8 +124,7 @@ char friendly_wordtype[][105] = {
     "single_relational_operator",
     "double_relational_operator",
     "char_const",
-    "string_const",
-    "eof"};
+    "string_const"};
 
 typedef enum
 {
@@ -137,8 +137,8 @@ typedef enum
     decimal_point,
     asterisk,
     slash,
-    // interrogation_mark,
-    // colon,
+    interrogation_mark,
+    colon,
     comma,
     space,
     plus,
@@ -151,8 +151,8 @@ typedef enum
     mod,
     bit_and,
     bit_or,
-    not,
-    semi,
+    exclamation,
+    semicolon,
     left_bracket,
     right_bracket,
     left_brace,
@@ -160,7 +160,8 @@ typedef enum
     left_parenthesis,
     right_parenthesis,
     apostrophe,
-    double_quotation
+    double_quotation,
+    eof
 } character_type;
 
 word_type get_word_type(char *str)
@@ -201,15 +202,17 @@ character_type get_character_type(char ch, state_type cur_state)
         return mod;
     else if (ch == '/')
         return slash;
-    // else if (ch == ':')
-    //     return colon;
+    else if (ch == ':')
+        return colon;
     else if (ch == '[')
         return left_bracket;
     else if (ch == ']')
         return right_bracket;
     else if (ch == ',')
         return comma;
-    else if (ch == 32) /* 空格 ASCII码值为32*/
+    else if (ch == ';')
+        return semicolon;
+    else if (ch == ' ')
         return space;
     else if (ch == '+')
         return plus;
@@ -222,10 +225,10 @@ character_type get_character_type(char ch, state_type cur_state)
     else if (ch == '<')
         return lt;
     else if (ch == '!')
-        return not ;
-    else if (ch == '\'') /* 单引号*/
+        return exclamation;
+    else if (ch == '\'')
         return apostrophe;
-    else if (ch == '\"') /* 双引号*/
+    else if (ch == '\"')
         return double_quotation;
     else if (ch == '(')
         return left_parenthesis;
@@ -237,7 +240,6 @@ character_type get_character_type(char ch, state_type cur_state)
         return right_brace;
     else
         return unknown;
-    return 0;
 }
 character_type get_next_character_type(char *straddr, int strlength, int cur_pos, state_type cur_state)
 {
@@ -246,13 +248,14 @@ character_type get_next_character_type(char *straddr, int strlength, int cur_pos
     else
         return get_character_type(straddr[cur_pos], cur_state);
 }
-void scopy_word(char *tmpstr, char *straddr, int l, int r)
+char *scopy_word(char *straddr, int l, int r)
 {
-    memset(tmpstr, sizeof(tmpstr), 0);
+    char *tmpstr = (char *)calloc(256, sizeof(char));
     for (int i = l; i < r; i++)
     {
         tmpstr[i - l] = straddr[i];
     }
+    return tmpstr;
 }
 
 word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
@@ -262,7 +265,7 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
     word_type wordtype = error;
 
     int cur_pos = *start_pos;
-    char tmpstr[256];
+    char *tmpstr;
 
     while (cur_state != End_state)
     {
@@ -283,6 +286,18 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
             case minus:
                 cur_state = minus_state;
                 break;
+            case eq:
+                cur_state = eq_state;
+                break;
+
+            case space:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+            case semicolon:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
 
             default:
                 cur_state = Err_state;
@@ -298,14 +313,13 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
             }
             else
             {
-                cur_pos++;
                 cur_state = In_ID_state;
+                cur_pos++;
             }
-
             break;
 
         case ID_end_state:
-            scopy_word(tmpstr, straddr, *start_pos, cur_pos);
+            tmpstr = scopy_word(straddr, *start_pos, cur_pos);
             wordtype = get_word_type(tmpstr);
             cur_state = End_state;
             break;
@@ -328,7 +342,6 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
                 wordtype = algo_operator;
                 cur_state = End_state;
             }
-            scopy_word(tmpstr, straddr, *start_pos, cur_pos);
 
             break;
 
@@ -350,11 +363,23 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
                 wordtype = algo_operator;
                 cur_state = End_state;
             }
-            scopy_word(tmpstr, straddr, *start_pos, cur_pos);
 
             break;
+
+        case eq_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eq)
+            {
+                wordtype = double_relational_operator;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else
+            {
+                wordtype = single_relational_operator;
+                cur_state = End_state;
+            }
+            break;
         case Err_state:
-            scopy_word(tmpstr, straddr, *start_pos, cur_pos);
             wordtype = error;
             cur_state = End_state;
             break;
@@ -364,6 +389,9 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
             break;
         }
     }
+
+    tmpstr = scopy_word(straddr, *start_pos, cur_pos);
+
     *start_pos = cur_pos;
     printf("%s ", tmpstr);
     return wordtype;
