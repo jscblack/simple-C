@@ -1,6 +1,6 @@
 /*
  * @Author       : Gehrychiang
- * @LastEditTime : 2021-10-30 21:35:47
+ * @LastEditTime : 2021-10-31 21:16:32
  * @Website      : www.yilantingfeng.site
  * @E-mail       : gehrychiang@aliyun.com
  * @ProbTitle    : (记得补充题目标题)
@@ -62,11 +62,11 @@ number(oct,dec,hex)
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#define keyword_count 24
+#define keyword_count 25
 char reserved_keyword[][20] = {"auto", "break", "case", "char", "continue",
                                "const", "default", "do", "double", "else",
                                "float", "for", "if", "int", "long", "return",
-                               "struct", "switch", "short", "signed", "sizeof",
+                               "struct", "string", "switch", "short", "signed", "sizeof",
                                "unsigned", "void", "while"};
 
 typedef enum
@@ -77,9 +77,20 @@ typedef enum
 
     plus_state,
     minus_state,
-
+    times_state,
     eq_state,
+
+    comment_begin_state,
     In_comment_state,
+    comment_end_state,
+
+    exclamation_state,
+    apostrophe_begin_state,
+    apostrophe_slash_state,
+    apostrophe_end_state,
+    double_quotation_begin_state,
+    double_quotation_slash_state,
+
     In_dec_state,
     In_oct_state,
     In_hex_state,
@@ -100,7 +111,9 @@ typedef enum
     comment,
     single_delimiter,
     algo_operator,
+    arrow_operator,
     self_operator,
+    assignment_operator,
     compound_assignment_operator,
     single_relational_operator,
     double_relational_operator,
@@ -119,7 +132,9 @@ char friendly_wordtype[][105] = {
     "comment",
     "single_delimiter",
     "algo_operator",
+    "arrow_operator",
     "self_operator",
+    "assignment_operator",
     "compound_assignment_operator",
     "single_relational_operator",
     "double_relational_operator",
@@ -139,6 +154,7 @@ typedef enum
     slash,
     interrogation_mark,
     colon,
+    backslash,
     comma,
     space,
     plus,
@@ -202,6 +218,8 @@ character_type get_character_type(char ch, state_type cur_state)
         return mod;
     else if (ch == '/')
         return slash;
+    else if (ch == '\\')
+        return backslash;
     else if (ch == ':')
         return colon;
     else if (ch == '[')
@@ -286,6 +304,9 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
             case minus:
                 cur_state = minus_state;
                 break;
+            case times:
+                cur_state = times_state;
+                break;
             case eq:
                 cur_state = eq_state;
                 break;
@@ -296,13 +317,43 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
                 cur_state = eq_state;
                 break;
 
+            case slash:
+                cur_state = comment_begin_state;
+                break;
 
+            case exclamation:
+                cur_state = exclamation_state;
+                break;
+            case apostrophe:
+                cur_state = apostrophe_begin_state;
+                break;
+            case double_quotation:
+                cur_state = double_quotation_begin_state;
+                break;
             //direct trans
             case space:
                 cur_state = End_state;
                 wordtype = single_delimiter;
                 break;
             case semicolon:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+
+            case decimal_point:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+            case mod:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+            case colon:
+                cur_state = End_state;
+                wordtype = single_delimiter;
+                break;
+
+            case comma:
                 cur_state = End_state;
                 wordtype = single_delimiter;
                 break;
@@ -373,13 +424,18 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
                 wordtype = algo_operator;
                 cur_state = End_state;
             }
-
             break;
 
         case minus_state:
             if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == minus)
             {
                 wordtype = self_operator;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == gt)
+            {
+                wordtype = arrow_operator;
                 cur_state = End_state;
                 cur_pos++;
             }
@@ -394,10 +450,92 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
                 wordtype = algo_operator;
                 cur_state = End_state;
             }
+            break;
 
+        case times_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eq)
+            {
+                wordtype = compound_assignment_operator;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else
+            {
+                wordtype = algo_operator;
+                cur_state = End_state;
+            }
             break;
 
         case eq_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eq)
+            {
+                wordtype = double_relational_operator;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else
+            {
+                wordtype = assignment_operator;
+                cur_state = End_state;
+            }
+            break;
+
+        case comment_begin_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == times)
+            {
+                cur_state = In_comment_state;
+                cur_pos++;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eq)
+            {
+                wordtype = compound_assignment_operator;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else
+            {
+                wordtype = algo_operator;
+                cur_state = End_state;
+            }
+            break;
+
+        case In_comment_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == times)
+            {
+                cur_state = comment_end_state;
+                cur_pos++;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eof)
+            {
+                wordtype = comment;
+                cur_state = End_state;
+            }
+            else
+            {
+                cur_state = In_comment_state;
+                cur_pos++;
+            }
+            break;
+
+        case comment_end_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == slash)
+            {
+                wordtype = comment;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eof)
+            {
+                wordtype = comment;
+                cur_state = End_state;
+            }
+            else
+            {
+                cur_state = In_comment_state;
+                cur_pos++;
+            }
+            break;
+        case exclamation_state:
             if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eq)
             {
                 wordtype = double_relational_operator;
@@ -410,6 +548,91 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
                 cur_state = End_state;
             }
             break;
+
+        case apostrophe_begin_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == backslash)
+            {
+                cur_state = apostrophe_slash_state;
+                cur_pos++;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == apostrophe)
+            {
+                cur_state = Err_state;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eof)
+            {
+                cur_state = Err_state;
+            }
+            else
+            {
+                cur_state = apostrophe_end_state;
+                cur_pos++;
+            }
+            break;
+
+        case apostrophe_slash_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == apostrophe)
+            {
+                cur_state = Err_state;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eof)
+            {
+                cur_state = Err_state;
+            }
+            else
+            {
+                cur_state = apostrophe_end_state;
+                cur_pos++;
+            }
+            break;
+
+        case apostrophe_end_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == apostrophe)
+            {
+                wordtype = char_const;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else
+            {
+                cur_state = Err_state;
+            }
+            break;
+
+        case double_quotation_begin_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == backslash)
+            {
+                cur_state = double_quotation_slash_state;
+                cur_pos++;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == double_quotation)
+            {
+                wordtype = string_const;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eof)
+            {
+                cur_state = Err_state;
+            }
+            else
+            {
+                cur_state = double_quotation_begin_state;
+                cur_pos++;
+            }
+            break;
+        case double_quotation_slash_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == eof)
+            {
+                cur_state = Err_state;
+            }
+            else
+            {
+                cur_state = double_quotation_begin_state;
+                cur_pos++;
+            }
+            break;
+
         case Err_state:
             wordtype = error;
             cur_state = End_state;
@@ -427,11 +650,43 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
     printf("%s ", tmpstr);
     return wordtype;
 }
+char *read_program_and_trim()
+{
+    char *input_str = (char *)calloc(100005, sizeof(char));
+    int p = 0;
+    while (gets(input_str + p) != NULL)
+    {
+        p = strlen(input_str);
+        input_str[p] = ' ';
+        input_str[p + 1] = '\0';
+        p++;
+    }
+    for (int i = 0; i < strlen(input_str); i++)
+    {
+        if (input_str[i] == ' ')
+        {
+            int l = i;
+            int r = i;
+            while (r + 1 < strlen(input_str) && input_str[r + 1] == ' ')
+            {
+                r++;
+            }
+            //[l,r] space
+            for (int j = r + 1; j < strlen(input_str) + 1; j++)
+            {
+                input_str[j - r + l] = input_str[j];
+            }
+            i = l;
+        }
+    }
+    return input_str;
+}
 int main()
 {
     //recognize id
-    char input_str[10005];
-    gets(input_str);
+
+    char *input_str = read_program_and_trim();
+    // puts(input_str);
     int curpos = 0;
     while (curpos < strlen(input_str))
     {
