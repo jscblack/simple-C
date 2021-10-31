@@ -1,6 +1,6 @@
 /*
  * @Author       : Gehrychiang
- * @LastEditTime : 2021-10-31 21:16:32
+ * @LastEditTime : 2021-10-31 21:24:33
  * @Website      : www.yilantingfeng.site
  * @E-mail       : gehrychiang@aliyun.com
  * @ProbTitle    : (记得补充题目标题)
@@ -62,12 +62,12 @@ number(oct,dec,hex)
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#define keyword_count 25
+#define keyword_count 26
 char reserved_keyword[][20] = {"auto", "break", "case", "char", "continue",
                                "const", "default", "do", "double", "else",
                                "float", "for", "if", "int", "long", "return",
                                "struct", "string", "switch", "short", "signed", "sizeof",
-                               "unsigned", "void", "while"};
+                               "unsigned", "void", "while", "NULL"};
 
 typedef enum
 {
@@ -90,7 +90,8 @@ typedef enum
     apostrophe_end_state,
     double_quotation_begin_state,
     double_quotation_slash_state,
-
+    bit_and_state,
+    bit_or_state,
     In_dec_state,
     In_oct_state,
     In_hex_state,
@@ -114,6 +115,8 @@ typedef enum
     arrow_operator,
     self_operator,
     assignment_operator,
+    bit_operator,
+    logi_operator,
     compound_assignment_operator,
     single_relational_operator,
     double_relational_operator,
@@ -135,6 +138,8 @@ char friendly_wordtype[][105] = {
     "arrow_operator",
     "self_operator",
     "assignment_operator",
+    "bit_operator",
+    "logi_operator",
     "compound_assignment_operator",
     "single_relational_operator",
     "double_relational_operator",
@@ -256,6 +261,10 @@ character_type get_character_type(char ch, state_type cur_state)
         return left_brace;
     else if (ch == '}')
         return right_brace;
+    else if (ch == '&')
+        return bit_and;
+    else if (ch == '|')
+        return bit_or;
     else
         return unknown;
 }
@@ -316,9 +325,15 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
             case gt:
                 cur_state = eq_state;
                 break;
-
             case slash:
                 cur_state = comment_begin_state;
+                break;
+
+            case bit_and:
+                cur_state = bit_and_state;
+                break;
+            case bit_or:
+                cur_state = bit_or_state;
                 break;
 
             case exclamation:
@@ -632,7 +647,32 @@ word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
                 cur_pos++;
             }
             break;
-
+        case bit_and_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == bit_and)
+            {
+                wordtype = logi_operator;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else
+            {
+                wordtype = bit_operator;
+                cur_state = End_state;
+            }
+            break;
+        case bit_or_state:
+            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == bit_or)
+            {
+                wordtype = logi_operator;
+                cur_state = End_state;
+                cur_pos++;
+            }
+            else
+            {
+                wordtype = bit_operator;
+                cur_state = End_state;
+            }
+            break;
         case Err_state:
             wordtype = error;
             cur_state = End_state;
