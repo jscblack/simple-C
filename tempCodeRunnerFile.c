@@ -1,6 +1,6 @@
 /*
  * @Author       : Gehrychiang
- * @LastEditTime : 2021-11-03 13:22:25
+ * @LastEditTime : 2021-11-02 22:11:35
  * @Website      : www.yilantingfeng.site
  * @E-mail       : gehrychiang@aliyun.com
  * @ProbTitle    : (记得补充题目标题)
@@ -156,7 +156,6 @@ typedef enum
     unknown,
     letter,
     hex_digit,
-    oct_digit,
     digit,
     zero,
     hex_label,
@@ -216,13 +215,11 @@ character_type get_character_type(char ch, state_type cur_state)
 {
     if (cur_state == zero_state && ch == 'x')
         return hex_label;
-    else if ((cur_state == zero_state || cur_state == In_oct_state) && (ch >= '0' && ch <= '7'))
-        return oct_digit;
     else if (cur_state == Start_state && ch == '0')
         return zero;
     else if ((cur_state == In_dec_state || cur_state == In_real_state) && (ch == 'e' || ch == 'E')) //在十进制整数下处理指数
         return exponent;
-    else if (cur_state == In_hex_state && (ch >= '0' && ch <= '9' || (ch >= 'a' && ch <= 'e') || (ch >= 'A' && ch <= 'E'))) //在十六进制下处理a-e
+    else if (cur_state == In_hex_state && ((ch >= 'a' && ch <= 'e') || (ch >= 'A' && ch <= 'E'))) //在十六进制下处理a-e
         return hex_digit;
     else if (ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z')
         return letter;
@@ -300,7 +297,7 @@ char *scopy_word(char *straddr, int l, int r)
     return tmpstr;
 }
 
-char *RecogniteWordByDFA(char *straddr, int strlength, int *start_pos, word_type *ret)
+word_type RecogniteWordByDFA(char *straddr, int strlength, int *start_pos)
 {
 
     state_type cur_state = Start_state;
@@ -703,7 +700,7 @@ char *RecogniteWordByDFA(char *straddr, int strlength, int *start_pos, word_type
                 cur_state = In_real_state;
                 cur_pos++;
             }
-            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == oct_digit)
+            else if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == digit)
             {
                 cur_state = In_oct_state;
                 cur_pos++;
@@ -711,31 +708,6 @@ char *RecogniteWordByDFA(char *straddr, int strlength, int *start_pos, word_type
             else
             {
                 wordtype = dec_integer;
-                cur_state = End_state;
-            }
-            break;
-        case In_oct_state:
-            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == oct_digit)
-            {
-                cur_state = In_oct_state;
-                cur_pos++;
-            }
-            else
-            {
-                wordtype = oct_integer;
-                cur_state = End_state;
-            }
-            break;
-
-        case In_hex_state:
-            if (get_next_character_type(straddr, strlength, cur_pos, cur_state) == hex_digit)
-            {
-                cur_state = In_hex_state;
-                cur_pos++;
-            }
-            else
-            {
-                wordtype = hex_integer;
                 cur_state = End_state;
             }
             break;
@@ -808,9 +780,8 @@ char *RecogniteWordByDFA(char *straddr, int strlength, int *start_pos, word_type
     tmpstr = scopy_word(straddr, *start_pos, cur_pos);
 
     *start_pos = cur_pos;
-    // printf("%s ", tmpstr);
-    *ret = wordtype;
-    return tmpstr;
+    printf("%s ", tmpstr);
+    return wordtype;
 }
 char *read_program_and_trim()
 {
@@ -850,18 +821,10 @@ int main()
     char *input_str = read_program_and_trim();
     // puts(input_str);
     int curpos = 0;
-    word_type res;
-    char *out = NULL;
     while (curpos < strlen(input_str))
     {
-        if (out == NULL)
-        {
-            printf("                   Token Table                     \n");
-            printf("---------------------------------------------------\n");
-        }
-        out = RecogniteWordByDFA(input_str, strlen(input_str), &curpos, &res);
-        printf("%-20s|%+30s\n", out, friendly_wordtype[res]);
-        printf("---------------------------------------------------\n");
+        word_type res = RecogniteWordByDFA(input_str, strlen(input_str), &curpos);
+        printf("%s\n", friendly_wordtype[res]);
     }
 
     return 0;

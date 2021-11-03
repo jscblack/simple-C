@@ -1,16 +1,19 @@
-/*
- * @Author       : Gehrychiang
- * @LastEditTime : 2021-10-31 21:17:49
- * @Website      : www.yilantingfeng.site
- * @E-mail       : gehrychiang@aliyun.com
- * @ProbTitle    : (记得补充题目标题)
- */
-/***this is comment*****/
-#include<stdio.h>
-int main()
+/*comment here*/
+struct node
 {
-    string a="hdiuewjaifj\"";
-    char c='a';
-    int b=(a!=c);
+    int val;
+};
+int main(void)
+{
+    struct node *a;
+    a->val = 0x7fffff;
+    if (a->val & 1 != 0)
+    {
+        printf("hello, world\n");
+    }
+    else
+    {
+        printf("%d", sizeof(*a));
+    }
     return 0;
 }
