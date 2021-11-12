@@ -1,6 +1,6 @@
 /*
  * @Author       : Gehrychiang
- * @LastEditTime : 2021-11-03 13:22:25
+ * @LastEditTime : 2021-11-12 19:04:50
  * @Website      : www.yilantingfeng.site
  * @E-mail       : gehrychiang@aliyun.com
  * @ProbTitle    : (记得补充题目标题)
@@ -62,6 +62,9 @@ number(oct,dec,hex)
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <fstream>
+#include "./bprinter/table_printer.h"
+using bprinter::TablePrinter;
 #define keyword_count 26
 char reserved_keyword[][20] = {"auto", "break", "case", "char", "continue",
                                "const", "default", "do", "double", "else",
@@ -171,6 +174,7 @@ typedef enum
     backslash,
     comma,
     space,
+
     plus,
     minus,
     times,
@@ -816,12 +820,20 @@ char *read_program_and_trim()
 {
     char *input_str = (char *)calloc(100005, sizeof(char));
     int p = 0;
-    while (gets(input_str + p) != NULL)
+    FILE *fp = fopen("inputTest.c", "r");
+    while (fgets(input_str + p, 10000, fp) != NULL)
     {
         p = strlen(input_str);
         input_str[p] = ' ';
         input_str[p + 1] = '\0';
         p++;
+    }
+    for (int i = 0; i < strlen(input_str); i++)
+    {
+        if (input_str[i] == '\n' || input_str[i] == '\r')
+        {
+            input_str[i] = ' ';
+        }
     }
     for (int i = 0; i < strlen(input_str); i++)
     {
@@ -846,22 +858,27 @@ char *read_program_and_trim()
 int main()
 {
     //recognize id
-
     char *input_str = read_program_and_trim();
-    // puts(input_str);
     int curpos = 0;
     word_type res;
     char *out = NULL;
+    TablePrinter tp(&std::cout);
+    tp.set_flush_left();
     while (curpos < strlen(input_str))
     {
         if (out == NULL)
         {
-            printf("                   Token Table                     \n");
-            printf("---------------------------------------------------\n");
+            tp.AddColumn("String", 20);
+            tp.AddColumn("Category", 30);
+            tp.PrintHeader();
         }
         out = RecogniteWordByDFA(input_str, strlen(input_str), &curpos, &res);
-        printf("%-20s|%+30s\n", out, friendly_wordtype[res]);
-        printf("---------------------------------------------------\n");
+        if (out[0] != '\n')
+            tp << out;
+        else
+            tp << "";
+        tp << friendly_wordtype[res];
+        tp.PrintFooter();
     }
 
     return 0;
