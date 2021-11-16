@@ -514,7 +514,7 @@ void analysis()
         auto iter = analysisTable.find(temp);
         if (analysisStack.back() == a)
         { // X 是 a ，把 X 从栈顶弹出并吧 index 推进到指向下一个符号
-            printAction += ("Match " + a);
+            printAction += ("match : " + a);
             analysisStack.pop_back(); //出栈
             index++;                  //输入串索引加一
         }
@@ -585,10 +585,10 @@ void analysis()
 void init()
 { //程序初始化：读入文法、初始化全局变量、输出非终结符跟终结符、读入要分析的表达式
     ifstream stream;
-    stream.open("grammar.txt");
+    stream.open("productions.txt");
     if (!stream.is_open())
     {
-        cout << "Can not open grammar.txt" << endl;
+        cout << "Can not open productions.txt" << endl;
         exit(EXIT_FAILURE);
     }
     string temp;
@@ -634,10 +634,10 @@ void init()
     cout << endl
          << endl;
     stream.close();
-    stream.open("expression.txt");
+    stream.open("sentence.txt");
     if (!stream.is_open())
     {
-        cout << "Can not open expression.txt" << endl;
+        cout << "Can not open sentence.txt" << endl;
         exit(EXIT_FAILURE);
     }
     stream >> expressionStr;
@@ -663,12 +663,12 @@ int main(int argc, char **argv)
              << endl;
     }
     createAnalysisTable();
-    cout << "Analysis Table:" << endl;
+    cout << "Predictable Analysis Table:" << endl;
     printAnalysisTableUsingBPrinter();
     cout << endl
-         << "Expression: " << expressionStr << endl
+         << "Sentence: " << expressionStr << endl
          << endl;
-    cout << "Analysis:" << endl;
+    cout << "LL(1) Analysis:" << endl;
     analysis();
     if (analysisResult)
     {
